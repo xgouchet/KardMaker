@@ -26,10 +26,12 @@ class Maker(
         val solver = TemplateSolver(template, inputDir)
 
         val imageDimension = solver.getImageDimension()
+
+        val debugElements = if (debug) solver.getDebugElements() else emptyList()
+
         configuration.cards.forEach {
-            val elements = solver.resolveElements(it)
+            val elements = solver.resolveElements(it) + debugElements
             generateCard(it.name, imageDimension, elements)
-//            generateCard(configuration.template, it)
         }
     }
 
