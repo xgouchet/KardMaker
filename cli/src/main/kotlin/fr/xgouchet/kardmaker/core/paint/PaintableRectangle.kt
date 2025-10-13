@@ -4,7 +4,6 @@ import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.Rectangle
-import kotlin.text.isNotBlank
 
 class PaintableRectangle(
     val rectangle: Rectangle,
@@ -13,7 +12,7 @@ class PaintableRectangle(
     val strokeWidth: Float,
     val cornerRadius: Int
 ) : PaintableElement {
-    override fun paint(graphics: Graphics2D, imageDimension: Rectangle) {
+    override fun paint(graphics: Graphics2D, imageDimension: Rectangle, verbose: Boolean) {
         if (fillColor != null) {
             graphics.color = fillColor
             if (cornerRadius > 0) {

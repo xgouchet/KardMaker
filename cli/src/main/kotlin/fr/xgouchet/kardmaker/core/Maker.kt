@@ -1,9 +1,7 @@
 package fr.xgouchet.kardmaker.core
 
 import fr.xgouchet.kardmaker.core.data.Configuration
-import fr.xgouchet.kardmaker.core.data.Template
 import fr.xgouchet.kardmaker.core.paint.PaintableElement
-import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.RenderingHints
@@ -23,7 +21,7 @@ class Maker(
 
     fun generateCards(configuration: Configuration) {
         val template = configuration.template
-        val solver = TemplateSolver(template, inputDir)
+        val solver = TemplateSolver(template, inputDir, verbose)
 
         val imageDimension = solver.getImageDimension()
 
@@ -45,46 +43,28 @@ class Maker(
         }
         val image = BufferedImage(imageDimension.width, imageDimension.height, ColorModel.OPAQUE)
         val graphics = image.graphics as? Graphics2D
-        checkNotNull(graphics)
+        if (graphics == null) {
+            println("  ✗ Can't convert graphics to Graphics2D")
+            return
+        }
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-        elements.forEach { it.paint(graphics, imageDimension) }
+        elements.forEach { it.paint(graphics, imageDimension, verbose) }
 
         // TODO DEBUG lines
         val outFile = File(outputDir, "${name}.$EXT")
         if (verbose) {
-            println("  · Writing $outFile")
+            println("  · Writing to $outFile")
         }
-        ImageIO.write(image, EXT, outFile)
+        val result = ImageIO.write(image, EXT, outFile)
+        if (result) {
+            println("  ✓ Successfully wrote to $outFile")
+        } else {
+            println("  ✗ Enable to write to $outFile")
+        }
     }
 
-    private fun paintDebugMarks(
-        image: BufferedImage,
-        template: Template
-    ) {
-
-        val graphics = image.graphics as? Graphics2D
-        checkNotNull(graphics)
-        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-
-        val cutRectangle = template.unitToPixel(template.cutRectangle())
-        graphics.color = Color.RED
-        graphics.drawRect(cutRectangle.x, cutRectangle.y, cutRectangle.width, cutRectangle.height)
-
-        val safeRectangle = template.unitToPixel(template.safeRectangle())
-        graphics.color = Color.GREEN
-        graphics.drawRect(safeRectangle.x, safeRectangle.y, safeRectangle.width, safeRectangle.height)
-    }
-
-    private fun createBaseImage(template: Template): BufferedImage {
-        val widthPixel = template.unitToPixel(template.width)
-        val heightPixel = template.unitToPixel(template.height)
-        return BufferedImage(
-            widthPixel,
-            heightPixel,
-            ColorModel.OPAQUE
-        )
-    }
 
     companion object {
         const val EXT = "png"
