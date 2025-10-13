@@ -41,10 +41,34 @@ class TemplateSolver(
 
     val pointToPixelFactor = MM_TO_IN * template.dpi
 
+
+    fun getImageDimension(): RectangleI {
+        return template.bleedRectangle().toPixel()
+    }
+
     fun resolveElements(cardData: CardData): List<PaintableElement> {
         return template.elements.flatMap {
             resolveElement(it, cardData, PointI())
         }
+    }
+
+    fun getDebugElements() : List<PaintableElement>{
+        return listOf(
+            PaintableRectangle(
+                rectangle = template.cutRectangle().toPixel(),
+                strokeColor = Color.RED,
+                fillColor = null,
+                strokeWidth = 1f,
+                cornerRadius = 0
+            ),
+            PaintableRectangle(
+                rectangle = template.safeRectangle().toPixel(),
+                strokeColor = Color.GREEN,
+                fillColor = null,
+                strokeWidth = 1f,
+                cornerRadius = 0
+            )
+        )
     }
 
     // region Resolve
@@ -278,10 +302,6 @@ class TemplateSolver(
             (x * pointToPixelFactor).roundToInt(),
             (y * pointToPixelFactor).roundToInt(),
         )
-    }
-
-    fun getImageDimension(): RectangleI {
-        return template.bleedRectangle().toPixel()
     }
 
     // endregion
