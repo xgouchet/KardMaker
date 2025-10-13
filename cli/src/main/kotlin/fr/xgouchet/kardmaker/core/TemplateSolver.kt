@@ -8,6 +8,7 @@ import fr.xgouchet.kardmaker.core.data.Referential
 import fr.xgouchet.kardmaker.core.data.RelativeRectangle
 import fr.xgouchet.kardmaker.core.data.SizeMode
 import fr.xgouchet.kardmaker.core.data.Template
+import fr.xgouchet.kardmaker.core.data.TemplateArray
 import fr.xgouchet.kardmaker.core.data.TemplateElement
 import fr.xgouchet.kardmaker.core.data.TemplateEllipse
 import fr.xgouchet.kardmaker.core.data.TemplateImage
@@ -23,6 +24,7 @@ import fr.xgouchet.kardmaker.core.paint.PaintableText
 import fr.xgouchet.kardmaker.core.utils.FontRepository
 import fr.xgouchet.kardmaker.core.utils.bottom
 import fr.xgouchet.kardmaker.core.utils.left
+import fr.xgouchet.kardmaker.core.utils.plus
 import fr.xgouchet.kardmaker.core.utils.refOrValue
 import fr.xgouchet.kardmaker.core.utils.right
 import fr.xgouchet.kardmaker.core.utils.top
@@ -40,35 +42,44 @@ class TemplateSolver(
     val pointToPixelFactor = MM_TO_IN * template.dpi
 
     fun resolveElements(cardData: CardData): List<PaintableElement> {
-        return template.elements.map {
-            resolveElement(it, cardData)
+        return template.elements.flatMap {
+            resolveElement(it, cardData, PointI())
         }
     }
 
     // region Resolve
 
-    private fun resolveElement(element: TemplateElement, cardData: CardData): PaintableElement {
+    private fun resolveElement(
+        element: TemplateElement,
+        cardData: CardData,
+        offset: PointI
+    ): Collection<PaintableElement> {
         return when (element) {
-            is TemplateImage -> resolveImageElement(element, cardData)
-            is TemplateRectangle -> resolveRectangleElement(element, cardData)
-            is TemplateEllipse -> resolveEllipseElement(element, cardData)
-            is TemplateLine -> resolveLineElement(element, cardData)
-            is TemplateText -> resolveTextElement(element, cardData)
+            is TemplateImage -> listOf(resolveImageElement(element, cardData, offset))
+            is TemplateRectangle -> listOf(resolveRectangleElement(element, cardData, offset))
+            is TemplateEllipse -> listOf(resolveEllipseElement(element, cardData, offset))
+            is TemplateLine -> listOf(resolveLineElement(element, cardData, offset))
+            is TemplateText -> listOf(resolveTextElement(element, cardData, offset))
+            is TemplateArray -> resolveArrayElements(element, cardData, offset)
             else -> TODO()
         }
     }
 
-    private fun resolveImageElement(element: TemplateImage, cardData: CardData): PaintableImage {
+    private fun resolveImageElement(element: TemplateImage, cardData: CardData, offset: PointI): PaintableImage {
         val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
         val resolvedName = element.imageName.refOrValue(cardData)
         return PaintableImage(
             inputFile = File(inputDir, resolvedName),
-            rectangle = resolvedRectangle,
+            rectangle = resolvedRectangle + offset,
             mode = element.mode
         )
     }
 
-    private fun resolveRectangleElement(element: TemplateRectangle, cardData: CardData): PaintableRectangle {
+    private fun resolveRectangleElement(
+        element: TemplateRectangle,
+        cardData: CardData,
+        offset: PointI
+    ): PaintableRectangle {
         val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
@@ -76,7 +87,7 @@ class TemplateSolver(
         val cornerRadius = element.cornerRadius.toPixel()
 
         return PaintableRectangle(
-            rectangle = resolvedRectangle,
+            rectangle = resolvedRectangle + offset,
             fillColor = fillColor,
             strokeColor = strokeColor,
             strokeWidth = strokeWidth,
@@ -84,14 +95,18 @@ class TemplateSolver(
         )
     }
 
-    private fun resolveEllipseElement(element: TemplateEllipse, cardData: CardData): PaintableEllipse {
+    private fun resolveEllipseElement(
+        element: TemplateEllipse,
+        cardData: CardData,
+        offset: PointI
+    ): PaintableEllipse {
         val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeWidth = element.strokeWidth.toSubPixel()
 
         return PaintableEllipse(
-            rectangle = resolvedRectangle,
+            rectangle = resolvedRectangle + offset,
             fillColor = fillColor,
             strokeColor = strokeColor,
             strokeWidth = strokeWidth,
@@ -100,7 +115,8 @@ class TemplateSolver(
 
     private fun resolveLineElement(
         element: TemplateLine,
-        cardData: CardData
+        cardData: CardData,
+        offset: PointI
     ): PaintableLine {
         val rect = resolveRectangle(element.rectangle, element.relative)
         val strokeColor = element.strokeColor.refOrValue(cardData).let { Color.decode(it) }
@@ -114,14 +130,15 @@ class TemplateSolver(
         return PaintableLine(
             strokeColor = strokeColor,
             strokeWidth = strokeWidth,
-            start = start,
-            end = end
+            start = start + offset,
+            end = end + offset
         )
     }
 
     private fun resolveTextElement(
         element: TemplateText,
-        cardData: CardData
+        cardData: CardData,
+        offset: PointI
     ): PaintableElement {
         val text = element.text.refOrValue(cardData)
         val font = element.font?.refOrValue(cardData)?.let { FontRepository.getFont(inputDir, it) }
@@ -159,7 +176,7 @@ class TemplateSolver(
 
         return PaintableText(
             text = text,
-            position = PointI(x, y),
+            position = PointI(x, y) + offset,
             textAnchor = element.textAnchor,
             fillColor = fillColor,
             strokeColor = strokeColor,
@@ -167,6 +184,23 @@ class TemplateSolver(
             font = font,
             fontSize = fontSize,
         )
+    }
+
+    private fun resolveArrayElements(
+        element: TemplateArray,
+        cardData: CardData,
+        offset: PointI
+    ): Collection<PaintableElement> {
+        val elements = mutableListOf<PaintableElement>()
+
+        for (i in 0 until element.count) {
+            val currentOffset = PointI((i * element.offset.x).toPixel(), (i * element.offset.x).toPixel()) + offset
+            element.elements.forEach {
+                elements.addAll(resolveElement(it, cardData, currentOffset))
+            }
+        }
+
+        return elements
     }
 
     // endregion
