@@ -39,7 +39,7 @@ class Maker(
         elements: List<PaintableElement>
     ) {
         if (verbose) {
-            println("· Generating card $name")
+            println("  · Generating card $name")
         }
         val image = BufferedImage(imageDimension.width, imageDimension.height, ColorModel.OPAQUE)
         val graphics = image.graphics as? Graphics2D
@@ -51,7 +51,7 @@ class Maker(
         // TODO DEBUG lines
         val outFile = File(outputDir, "${name}.$EXT")
         if (verbose) {
-            println("· Writing $outFile")
+            println("  · Writing $outFile")
         }
         ImageIO.write(image, EXT, outFile)
     }

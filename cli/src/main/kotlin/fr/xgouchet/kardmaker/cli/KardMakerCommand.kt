@@ -43,7 +43,7 @@ class KardMakerCommand : CliktCommand("km") {
     @OptIn(ExperimentalSerializationApi::class)
     private fun runOnJsonFile(jsonFile: File) {
         if (verbose) {
-            println("· Reading config from ${inputFile.absolutePath}")
+            println("· Reading config from ${jsonFile.absolutePath}")
         }
         val json = Json {
             allowTrailingComma = true

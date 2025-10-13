@@ -1,5 +1,6 @@
 package fr.xgouchet.kardmaker.core.utils
 
+import java.awt.Point
 import java.awt.Rectangle
 
 val Rectangle.left: Int
@@ -13,3 +14,12 @@ val Rectangle.right: Int
 
 val Rectangle.bottom: Int
     get() = y + height
+
+operator fun Rectangle.plus(offset: Point): Rectangle {
+    return Rectangle(
+        x + offset.x,
+        y + offset.y,
+        width,
+        height
+    )
+}
