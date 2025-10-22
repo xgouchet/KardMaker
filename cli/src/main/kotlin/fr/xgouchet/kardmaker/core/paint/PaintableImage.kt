@@ -10,6 +10,7 @@ import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.awt.image.ImageObserver
 import java.io.File
+import java.io.IOException
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
@@ -23,7 +24,13 @@ class PaintableImage(
         if (verbose) {
             println("    · Loading image from $inputFile")
         }
-        val inputImage = ImageIO.read(inputFile)
+
+        val inputImage = try {
+            ImageIO.read(inputFile)
+        } catch (e: IOException) {
+            null
+        }
+
         if (inputImage == null) {
             println("    ✗ failed to load image from $inputFile")
             return
@@ -85,6 +92,6 @@ class PaintableImage(
     }
 
     companion object {
-        private val NoOpObserver = ImageObserver { img, infoflags, x, y, width, height -> true }
+        val NoOpObserver = ImageObserver { img, infoflags, x, y, width, height -> true }
     }
 }
