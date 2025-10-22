@@ -37,6 +37,7 @@ import java.awt.Rectangle as RectangleI
 class TemplateSolver(
     val template: Template,
     val inputDir: File,
+    val verbose: Boolean,
 ) {
 
     val pointToPixelFactor = MM_TO_IN * template.dpi
@@ -52,7 +53,7 @@ class TemplateSolver(
         }
     }
 
-    fun getDebugElements() : List<PaintableElement>{
+    fun getDebugElements(): List<PaintableElement> {
         return listOf(
             PaintableRectangle(
                 rectangle = template.cutRectangle().toPixel(),
@@ -165,7 +166,7 @@ class TemplateSolver(
         offset: PointI
     ): PaintableElement {
         val text = element.text.refOrValue(cardData)
-        val font = element.font?.refOrValue(cardData)?.let { FontRepository.getFont(inputDir, it) }
+        val font = element.font?.refOrValue(cardData)?.let { FontRepository.getFont(inputDir, it, verbose) }
         val fontSize = element.fontSize.toSubPixel()
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
@@ -218,7 +219,7 @@ class TemplateSolver(
         val elements = mutableListOf<PaintableElement>()
 
         for (i in 0 until element.count) {
-            val currentOffset = PointI((i * element.offset.x).toPixel(), (i * element.offset.x).toPixel()) + offset
+            val currentOffset = PointI((i * element.offset.x).toPixel(), (i * element.offset.y).toPixel()) + offset
             element.elements.forEach {
                 elements.addAll(resolveElement(it, cardData, currentOffset))
             }
@@ -244,37 +245,61 @@ class TemplateSolver(
                 Referential.CUT -> template.cutRectangle()
                 Referential.SAFE -> template.safeRectangle()
             }
+            val absoluteRect = when (relRect.sizeMode) {
+                SizeMode.PERCENT -> Rectangle(
+                    refRect.left + (relRect.marginH * refRect.width()),
+                    refRect.top + (relRect.marginV * refRect.height()),
+                    refRect.right - (relRect.marginH * refRect.width()),
+                    refRect.bottom - (relRect.marginV * refRect.height()),
+                )
+
+                SizeMode.ABSOLUTE -> Rectangle(
+                    refRect.left + relRect.marginH,
+                    refRect.top + relRect.marginV,
+                    refRect.right - relRect.marginH,
+                    refRect.bottom - relRect.marginV,
+                )
+            }
             val (width, height) = when (relRect.sizeMode) {
-                SizeMode.PERCENT -> (relRect.width * refRect.width()) to (relRect.height * refRect.height())
+                SizeMode.PERCENT -> (relRect.width * absoluteRect.width()) to (relRect.height * absoluteRect.height())
                 SizeMode.ABSOLUTE -> relRect.width to relRect.height
+            }
+            val (paddingH, paddingV) = when (relRect.sizeMode) {
+                SizeMode.PERCENT -> (relRect.paddingH * absoluteRect.width()) to (relRect.paddingV * absoluteRect.height())
+                SizeMode.ABSOLUTE -> relRect.paddingH to relRect.paddingV
             }
             val x = when (relRect.snapToAnchor) {
                 Direction.WEST,
                 Direction.NORTH_WEST,
-                Direction.SOUTH_WEST -> refRect.left
+                Direction.SOUTH_WEST -> absoluteRect.left
 
                 Direction.CENTER,
                 Direction.NORTH,
-                Direction.SOUTH -> refRect.left + (refRect.width() - width) / 2
+                Direction.SOUTH -> absoluteRect.left + (absoluteRect.width() - width) / 2
 
                 Direction.EAST,
                 Direction.NORTH_EAST,
-                Direction.SOUTH_EAST -> refRect.right - width
+                Direction.SOUTH_EAST -> absoluteRect.right - width
             }
             val y = when (relRect.snapToAnchor) {
                 Direction.NORTH,
                 Direction.NORTH_WEST,
-                Direction.NORTH_EAST -> refRect.top
+                Direction.NORTH_EAST -> absoluteRect.top
 
                 Direction.WEST,
                 Direction.EAST,
-                Direction.CENTER -> refRect.top + (refRect.height() - height) / 2
+                Direction.CENTER -> absoluteRect.top + (absoluteRect.height() - height) / 2
 
                 Direction.SOUTH,
                 Direction.SOUTH_WEST,
-                Direction.SOUTH_EAST -> refRect.bottom - height
+                Direction.SOUTH_EAST -> absoluteRect.bottom - height
             }
-            return Rectangle(x, y, x + width, y + height).toPixel()
+            return Rectangle(
+                x + paddingH,
+                y + paddingV,
+                x + width - paddingH,
+                y + height - paddingV
+            ).toPixel()
         }
         error("Missing eithe a rectangle or relativeRectangle ")
     }

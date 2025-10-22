@@ -19,10 +19,10 @@ class PaintableText(
     val strokeColor: Color?,
     val strokeWidth: Float,
     val font: Font?,
-    val fontSize : Float
+    val fontSize: Float
 ) : PaintableElement {
 
-    override fun paint(graphics: Graphics2D, imageDimension: Rectangle) {
+    override fun paint(graphics: Graphics2D, imageDimension: Rectangle, verbose: Boolean) {
         if (font != null) {
             val sizedFont = font.deriveFont(fontSize)
             graphics.font = sizedFont

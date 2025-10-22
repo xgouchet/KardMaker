@@ -19,9 +19,15 @@ class PaintableImage(
     val mode: ImageMode = ImageMode.CROP
 ) : PaintableElement {
 
-    override fun paint(graphics: Graphics2D, imageDimension: Rectangle) {
+    override fun paint(graphics: Graphics2D, imageDimension: Rectangle, verbose: Boolean) {
+        if (verbose) {
+            println("    · Loading image from $inputFile")
+        }
         val inputImage = ImageIO.read(inputFile)
-        checkNotNull(inputImage)
+        if (inputImage == null) {
+            println("    ✗ failed to load image from $inputFile")
+            return
+        }
 
         val src = getSourceRectangle(inputImage)
         val dest = getDestRectangle(inputImage)

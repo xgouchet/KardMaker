@@ -12,7 +12,7 @@ class PaintableLine(
     val start: Point,
     val end: Point
 ) : PaintableElement {
-    override fun paint(graphics: Graphics2D, imageDimension: Rectangle) {
+    override fun paint(graphics: Graphics2D, imageDimension: Rectangle, verbose: Boolean) {
         graphics.color = strokeColor
         graphics.stroke = BasicStroke(strokeWidth)
         graphics.drawLine(start.x, start.y, end.x, end.y)

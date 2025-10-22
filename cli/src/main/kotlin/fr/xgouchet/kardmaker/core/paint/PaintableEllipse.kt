@@ -11,7 +11,7 @@ class PaintableEllipse(
     val strokeColor: Color?,
     val strokeWidth: Float
 ) : PaintableElement {
-    override fun paint(graphics: Graphics2D, imageDimension: Rectangle) {
+    override fun paint(graphics: Graphics2D, imageDimension: Rectangle, verbose: Boolean) {
         if (fillColor != null) {
             graphics.color = fillColor
             graphics.fillOval(
