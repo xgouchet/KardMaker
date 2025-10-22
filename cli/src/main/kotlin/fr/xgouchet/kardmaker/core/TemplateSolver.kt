@@ -47,6 +47,10 @@ class TemplateSolver(
         return template.bleedRectangle().toPixel()
     }
 
+    fun getCutRectangle(): RectangleI {
+        return template.cutRectangle().toPixel()
+    }
+
     fun resolveElements(cardData: CardData): List<PaintableElement> {
         return template.elements.flatMap {
             resolveElement(it, cardData, PointI())
@@ -304,10 +308,10 @@ class TemplateSolver(
         error("Missing eithe a rectangle or relativeRectangle ")
     }
 
+
     private fun Float.toPixel(): Int {
         return (this * pointToPixelFactor).roundToInt()
     }
-
 
     private fun Float.toSubPixel(): Float {
         return (this * pointToPixelFactor)

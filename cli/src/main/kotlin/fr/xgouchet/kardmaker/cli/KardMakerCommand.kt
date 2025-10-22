@@ -17,6 +17,7 @@ class KardMakerCommand : CliktCommand("km") {
     val verbose by option("-v", "--verbose").flag()
     val folder by option("-f", "--folder").flag()
     val debug by option("-d", "--debug").flag()
+    val noBleed by option("-b", "--no-bleed").flag()
 
     val inputFile: File by argument(help = "path to the configuration json file").file(
         mustExist = true,
@@ -50,7 +51,7 @@ class KardMakerCommand : CliktCommand("km") {
         }
         val configuration = json.decodeFromStream<Configuration>(jsonFile.inputStream())
 
-        Maker(jsonFile.parentFile, verbose, debug).generateCards(configuration)
+        Maker(jsonFile.parentFile, noBleed, verbose, debug).generateCards(configuration)
     }
 
 }

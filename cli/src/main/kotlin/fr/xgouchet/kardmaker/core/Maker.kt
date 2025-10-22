@@ -2,6 +2,11 @@ package fr.xgouchet.kardmaker.core
 
 import fr.xgouchet.kardmaker.core.data.Configuration
 import fr.xgouchet.kardmaker.core.paint.PaintableElement
+import fr.xgouchet.kardmaker.core.paint.PaintableImage.Companion.NoOpObserver
+import fr.xgouchet.kardmaker.core.utils.bottom
+import fr.xgouchet.kardmaker.core.utils.left
+import fr.xgouchet.kardmaker.core.utils.right
+import fr.xgouchet.kardmaker.core.utils.top
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.RenderingHints
@@ -12,6 +17,7 @@ import javax.imageio.ImageIO
 
 class Maker(
     workingDir: File,
+    val noBleed: Boolean,
     val verbose: Boolean,
     val debug: Boolean
 ) {
@@ -26,17 +32,19 @@ class Maker(
         val imageDimension = solver.getImageDimension()
 
         val debugElements = if (debug) solver.getDebugElements() else emptyList()
+        val cutRectangle = if (noBleed) solver.getCutRectangle() else imageDimension
 
         configuration.cards.forEach {
             val elements = solver.resolveElements(it) + debugElements
-            generateCard(it.name, imageDimension, elements)
+            generateCard(it.name, imageDimension, cutRectangle, elements)
         }
     }
 
     private fun generateCard(
         name: String,
         imageDimension: Rectangle,
-        elements: List<PaintableElement>
+        cutRectangle: Rectangle,
+        elements: List<PaintableElement>,
     ) {
         if (verbose) {
             println("  · Generating card $name")
@@ -52,12 +60,20 @@ class Maker(
 
         elements.forEach { it.paint(graphics, imageDimension, verbose) }
 
+        val finalImage = BufferedImage(cutRectangle.width, cutRectangle.height, ColorModel.OPAQUE)
+        finalImage.graphics.drawImage(
+            image,
+            0, 0, cutRectangle.width, cutRectangle.height,
+            cutRectangle.left, cutRectangle.top, cutRectangle.right, cutRectangle.bottom,
+            NoOpObserver
+        )
+
         // TODO DEBUG lines
         val outFile = File(outputDir, "${name}.$EXT")
         if (verbose) {
             println("  · Writing to $outFile")
         }
-        val result = ImageIO.write(image, EXT, outFile)
+        val result = ImageIO.write(finalImage, EXT, outFile)
         if (result) {
             println("  ✓ Successfully wrote to $outFile")
         } else {
