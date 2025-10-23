@@ -2,6 +2,7 @@ plugins {
     id("buildsrc.convention.kotlin-jvm")
     application
     alias(libs.plugins.kotlinPluginSerialization)
+    id("com.github.johnrengelman.shadow") version ("8.1.1")
 }
 
 dependencies {
@@ -13,5 +14,13 @@ dependencies {
 }
 
 application {
-    mainClass = "fr.xgouchet.karmaker.AppKt"
+    mainClass = "fr.xgouchet.kardmaker.AppKt"
+}
+
+tasks.jar {
+    manifest.attributes("Main-Class" to application.mainClass.get())
+}
+
+tasks.shadowJar {
+    manifest.attributes["Main-Class"] =  application.mainClass.get()
 }
