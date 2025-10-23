@@ -13,12 +13,14 @@ import fr.xgouchet.kardmaker.core.data.TemplateElement
 import fr.xgouchet.kardmaker.core.data.TemplateEllipse
 import fr.xgouchet.kardmaker.core.data.TemplateImage
 import fr.xgouchet.kardmaker.core.data.TemplateLine
+import fr.xgouchet.kardmaker.core.data.TemplatePolygon
 import fr.xgouchet.kardmaker.core.data.TemplateRectangle
 import fr.xgouchet.kardmaker.core.data.TemplateText
 import fr.xgouchet.kardmaker.core.paint.PaintableElement
 import fr.xgouchet.kardmaker.core.paint.PaintableEllipse
 import fr.xgouchet.kardmaker.core.paint.PaintableImage
 import fr.xgouchet.kardmaker.core.paint.PaintableLine
+import fr.xgouchet.kardmaker.core.paint.PaintablePolygon
 import fr.xgouchet.kardmaker.core.paint.PaintableRectangle
 import fr.xgouchet.kardmaker.core.paint.PaintableText
 import fr.xgouchet.kardmaker.core.utils.FontRepository
@@ -89,13 +91,14 @@ class TemplateSolver(
             is TemplateEllipse -> listOf(resolveEllipseElement(element, cardData, offset))
             is TemplateLine -> listOf(resolveLineElement(element, cardData, offset))
             is TemplateText -> listOf(resolveTextElement(element, cardData, offset))
+            is TemplatePolygon -> listOf(resolvePolygonElement(element, cardData, offset))
             is TemplateArray -> resolveArrayElements(element, cardData, offset)
             else -> TODO()
         }
     }
 
     private fun resolveImageElement(element: TemplateImage, cardData: CardData, offset: PointI): PaintableImage {
-        val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
+        val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
         val resolvedName = element.imageName.refOrValue(cardData)
         return PaintableImage(
             inputFile = File(inputDir, resolvedName),
@@ -109,7 +112,7 @@ class TemplateSolver(
         cardData: CardData,
         offset: PointI
     ): PaintableRectangle {
-        val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
+        val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeWidth = element.strokeWidth.toSubPixel()
@@ -129,7 +132,7 @@ class TemplateSolver(
         cardData: CardData,
         offset: PointI
     ): PaintableEllipse {
-        val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
+        val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeWidth = element.strokeWidth.toSubPixel()
@@ -147,7 +150,7 @@ class TemplateSolver(
         cardData: CardData,
         offset: PointI
     ): PaintableLine {
-        val rect = resolveRectangle(element.rectangle, element.relative)
+        val rect = resolveRectangleI(element.rectangle, element.relative)
         val strokeColor = element.strokeColor.refOrValue(cardData).let { Color.decode(it) }
         val strokeWidth = element.strokeWidth.toSubPixel()
 
@@ -164,6 +167,34 @@ class TemplateSolver(
         )
     }
 
+    private fun resolvePolygonElement(
+        element: TemplatePolygon,
+        cardData: CardData,
+        offset: PointI
+    ): PaintableElement {
+        val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
+        val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val strokeWidth = element.strokeWidth.toSubPixel()
+        val viewport = element.viewport
+        val cornerRadius = element.cornerRadius.toPixel()
+
+        val points = element.points.map {
+            Point(
+                lerp(it.x, viewport.left, viewport.right, resolvedRectangle.left, resolvedRectangle.right),
+                lerp(it.y, viewport.top, viewport.bottom, resolvedRectangle.top, resolvedRectangle.bottom)
+            ).toPixel() + offset
+        }
+
+        return PaintablePolygon(
+            points = points,
+            fillColor = fillColor,
+            strokeColor = strokeColor,
+            strokeWidth = strokeWidth,
+            cornerRadius = cornerRadius
+        )
+    }
+
     private fun resolveTextElement(
         element: TemplateText,
         cardData: CardData,
@@ -175,32 +206,16 @@ class TemplateSolver(
         val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
         val strokeWidth = element.strokeWidth.toSubPixel()
-        val rect = resolveRectangle(element.rectangle, element.relative)
+        val rect = resolveRectangleI(element.rectangle, element.relative)
         val x = when (element.rectangleAnchor) {
-            Direction.WEST,
-            Direction.NORTH_WEST,
-            Direction.SOUTH_WEST -> rect.left
-
-            Direction.CENTER,
-            Direction.NORTH,
-            Direction.SOUTH -> rect.centerX.roundToInt()
-
-            Direction.EAST,
-            Direction.NORTH_EAST,
-            Direction.SOUTH_EAST -> rect.right
+            Direction.WEST, Direction.NORTH_WEST, Direction.SOUTH_WEST -> rect.left
+            Direction.CENTER, Direction.NORTH, Direction.SOUTH -> rect.centerX.roundToInt()
+            Direction.EAST, Direction.NORTH_EAST, Direction.SOUTH_EAST -> rect.right
         }
         val y = when (element.rectangleAnchor) {
-            Direction.NORTH,
-            Direction.NORTH_WEST,
-            Direction.NORTH_EAST -> rect.top
-
-            Direction.CENTER,
-            Direction.EAST,
-            Direction.WEST -> rect.centerY.roundToInt()
-
-            Direction.SOUTH,
-            Direction.SOUTH_WEST,
-            Direction.SOUTH_EAST -> rect.bottom
+            Direction.NORTH, Direction.NORTH_WEST, Direction.NORTH_EAST -> rect.top
+            Direction.CENTER, Direction.EAST, Direction.WEST -> rect.centerY.roundToInt()
+            Direction.SOUTH, Direction.SOUTH_WEST, Direction.SOUTH_EAST -> rect.bottom
         }
 
         return PaintableText(
@@ -236,12 +251,14 @@ class TemplateSolver(
 
     // region Utils
 
-    private fun resolveRectangle(
-        rectangle: Rectangle?,
-        relRect: RelativeRectangle?
-    ): RectangleI {
+    private fun resolveRectangleI(rectangle: Rectangle?, relRect: RelativeRectangle?): RectangleI {
+        return resolveRectangle(rectangle, relRect).toPixel()
+    }
+
+
+    private fun resolveRectangle(rectangle: Rectangle?, relRect: RelativeRectangle?): Rectangle {
         if (rectangle != null) {
-            return rectangle.toPixel()
+            return rectangle
         }
         if (relRect != null) {
             val refRect: Rectangle = when (relRect.referential) {
@@ -273,41 +290,21 @@ class TemplateSolver(
                 SizeMode.ABSOLUTE -> relRect.paddingH to relRect.paddingV
             }
             val x = when (relRect.snapToAnchor) {
-                Direction.WEST,
-                Direction.NORTH_WEST,
-                Direction.SOUTH_WEST -> absoluteRect.left
-
-                Direction.CENTER,
-                Direction.NORTH,
-                Direction.SOUTH -> absoluteRect.left + (absoluteRect.width() - width) / 2
-
-                Direction.EAST,
-                Direction.NORTH_EAST,
-                Direction.SOUTH_EAST -> absoluteRect.right - width
+                Direction.WEST, Direction.NORTH_WEST, Direction.SOUTH_WEST -> absoluteRect.left
+                Direction.CENTER, Direction.NORTH, Direction.SOUTH -> absoluteRect.left + (absoluteRect.width() - width) / 2
+                Direction.EAST, Direction.NORTH_EAST, Direction.SOUTH_EAST -> absoluteRect.right - width
             }
             val y = when (relRect.snapToAnchor) {
-                Direction.NORTH,
-                Direction.NORTH_WEST,
-                Direction.NORTH_EAST -> absoluteRect.top
-
-                Direction.WEST,
-                Direction.EAST,
-                Direction.CENTER -> absoluteRect.top + (absoluteRect.height() - height) / 2
-
-                Direction.SOUTH,
-                Direction.SOUTH_WEST,
-                Direction.SOUTH_EAST -> absoluteRect.bottom - height
+                Direction.NORTH, Direction.NORTH_WEST, Direction.NORTH_EAST -> absoluteRect.top
+                Direction.WEST, Direction.EAST, Direction.CENTER -> absoluteRect.top + (absoluteRect.height() - height) / 2
+                Direction.SOUTH, Direction.SOUTH_WEST, Direction.SOUTH_EAST -> absoluteRect.bottom - height
             }
             return Rectangle(
-                x + paddingH,
-                y + paddingV,
-                x + width - paddingH,
-                y + height - paddingV
-            ).toPixel()
+                x + paddingH, y + paddingV, x + width - paddingH, y + height - paddingV
+            )
         }
         error("Missing eithe a rectangle or relativeRectangle ")
     }
-
 
     private fun Float.toPixel(): Int {
         return (this * pointToPixelFactor).roundToInt()
@@ -331,6 +328,16 @@ class TemplateSolver(
             (x * pointToPixelFactor).roundToInt(),
             (y * pointToPixelFactor).roundToInt(),
         )
+    }
+
+    private fun lerp(
+        input: Float,
+        srcMin: Float,
+        srcMax: Float,
+        destMin: Float,
+        destMax: Float
+    ): Float {
+        return (((input - srcMin) / (srcMax - srcMin)) * (destMax - destMin)) + destMin
     }
 
     // endregion
