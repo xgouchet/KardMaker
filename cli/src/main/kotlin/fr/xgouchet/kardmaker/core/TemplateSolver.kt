@@ -24,6 +24,7 @@ import fr.xgouchet.kardmaker.core.paint.PaintablePolygon
 import fr.xgouchet.kardmaker.core.paint.PaintableRectangle
 import fr.xgouchet.kardmaker.core.paint.PaintableText
 import fr.xgouchet.kardmaker.core.utils.FontRepository
+import fr.xgouchet.kardmaker.core.utils.asColor
 import fr.xgouchet.kardmaker.core.utils.bottom
 import fr.xgouchet.kardmaker.core.utils.left
 import fr.xgouchet.kardmaker.core.utils.plus
@@ -113,8 +114,8 @@ class TemplateSolver(
         offset: PointI
     ): PaintableRectangle {
         val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
-        val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
-        val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val fillColor = element.fillColor?.refOrValue(cardData)?.asColor()
+        val strokeColor = element.strokeColor?.refOrValue(cardData)?.asColor()
         val strokeWidth = element.strokeWidth.toSubPixel()
         val cornerRadius = element.cornerRadius.toPixel()
 
@@ -133,8 +134,8 @@ class TemplateSolver(
         offset: PointI
     ): PaintableEllipse {
         val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
-        val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
-        val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val fillColor = element.fillColor?.refOrValue(cardData)?.asColor()
+        val strokeColor = element.strokeColor?.refOrValue(cardData)?.asColor()
         val strokeWidth = element.strokeWidth.toSubPixel()
 
         return PaintableEllipse(
@@ -173,8 +174,8 @@ class TemplateSolver(
         offset: PointI
     ): PaintableElement {
         val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
-        val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
-        val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val fillColor = element.fillColor?.refOrValue(cardData)?.asColor()
+        val strokeColor = element.strokeColor?.refOrValue(cardData)?.asColor()
         val strokeWidth = element.strokeWidth.toSubPixel()
         val viewport = element.viewport
         val cornerRadius = element.cornerRadius.toPixel()
@@ -203,8 +204,8 @@ class TemplateSolver(
         val text = element.text.refOrValue(cardData)
         val font = element.font?.refOrValue(cardData)?.let { FontRepository.getFont(inputDir, it, verbose) }
         val fontSize = element.fontSize.toSubPixel()
-        val fillColor = element.fillColor?.refOrValue(cardData)?.let { Color.decode(it) }
-        val strokeColor = element.strokeColor?.refOrValue(cardData)?.let { Color.decode(it) }
+        val fillColor = element.fillColor?.refOrValue(cardData)?.asColor()
+        val strokeColor = element.strokeColor?.refOrValue(cardData)?.asColor()
         val strokeWidth = element.strokeWidth.toSubPixel()
         val rect = resolveRectangleI(element.rectangle, element.relative)
         val x = when (element.rectangleAnchor) {
