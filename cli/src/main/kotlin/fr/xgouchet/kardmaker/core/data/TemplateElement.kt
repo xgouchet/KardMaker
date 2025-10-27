@@ -91,5 +91,13 @@ class TemplateArray(
     override val comment: String? = null,
 ) : TemplateElement()
 
+@Serializable
+@SerialName("instances")
+class TemplateInstances(
+    val elements: List<TemplateElement>,
+    val positions: List<Point>,
+    override val comment: String? = null,
+) : TemplateElement()
+
 
 
