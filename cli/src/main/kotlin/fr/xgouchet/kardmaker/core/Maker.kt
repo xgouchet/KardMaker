@@ -34,9 +34,10 @@ class Maker(
         val debugElements = if (debug) solver.getDebugElements() else emptyList()
         val cutRectangle = if (noBleed) solver.getCutRectangle() else imageDimension
 
-        configuration.cards.forEach {
-            val elements = solver.resolveElements(it) + debugElements
-            generateCard(it.name, imageDimension, cutRectangle, elements)
+        configuration.cards.forEachIndexed { index, cardData ->
+            val elements = solver.resolveElements(cardData) + debugElements
+            val name = solver.resolveOutputName(cardData, index)
+            generateCard(name, imageDimension, cutRectangle, elements)
         }
     }
 
@@ -68,8 +69,7 @@ class Maker(
             NoOpObserver
         )
 
-        // TODO DEBUG lines
-        val outFile = File(outputDir, "${name}.$EXT")
+        val outFile = getOutputFile(name)
         if (verbose) {
             println("  · Writing to $outFile")
         }
@@ -81,6 +81,17 @@ class Maker(
         }
     }
 
+    private fun getOutputFile(name: String): File {
+        val pathSegments = name.split(File.separatorChar)
+        return if (pathSegments.size == 1) {
+            File(outputDir, "${name}.$EXT")
+        } else {
+            val segments = pathSegments.take(pathSegments.size - 1)
+            val parentDir = segments.fold(outputDir) { agg, it -> File(agg, it) }
+            parentDir.mkdirs()
+            File(parentDir, "${pathSegments.last()}.$EXT")
+        }
+    }
 
     companion object {
         const val EXT = "png"

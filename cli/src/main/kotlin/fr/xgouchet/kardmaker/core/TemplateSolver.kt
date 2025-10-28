@@ -61,6 +61,34 @@ class TemplateSolver(
         }
     }
 
+    fun resolveOutputName(cardData: CardData, index: Int): String {
+        if (template.name.isNullOrBlank()) return cardData.name
+
+        val matches = NAMING_REGEX.findAll(template.name).toList()
+
+        val stringBuilder = StringBuilder()
+        var inputIndex = 0
+        matches.forEach {
+            stringBuilder.append(template.name.substring(inputIndex, it.range.first))
+            val ref = it.groupValues.last()
+            if (ref.startsWith("ref:")) {
+                stringBuilder.append(ref.refOrValue(cardData))
+            } else if (ref == "name") {
+                stringBuilder.append(cardData.name)
+            } else if (ref .startsWith("id:")) {
+                val padding = ref.substringAfterLast(':').toIntOrNull() ?: 1
+                stringBuilder.append(index.toString().padStart(padding, '0'))
+            } else {
+                error("Unknown ref in template name: {$ref}")
+            }
+            inputIndex = it.range.last + 1
+        }
+        if (inputIndex < template.name.lastIndex) {
+            stringBuilder.append(template.name.substring(inputIndex, template.name.lastIndex + 1))
+        }
+        return stringBuilder.toString()
+    }
+
     fun getDebugElements(): List<PaintableElement> {
         return listOf(
             PaintableRectangle(
@@ -364,5 +392,7 @@ class TemplateSolver(
 
     companion object {
         const val MM_TO_IN = 0.0393701f
+
+        val NAMING_REGEX = Regex("""\{([^}]*)\}""")
     }
 }
