@@ -1,6 +1,8 @@
 package fr.xgouchet.kardmaker.core
 
+import fr.xgouchet.kardmaker.core.data.CardData
 import fr.xgouchet.kardmaker.core.data.Configuration
+import fr.xgouchet.kardmaker.core.data.ResolvedCardData
 import fr.xgouchet.kardmaker.core.paint.PaintableElement
 import fr.xgouchet.kardmaker.core.paint.PaintableImage.Companion.NoOpObserver
 import fr.xgouchet.kardmaker.core.utils.bottom
@@ -34,10 +36,34 @@ class Maker(
         val debugElements = if (debug) solver.getDebugElements() else emptyList()
         val cutRectangle = if (noBleed) solver.getCutRectangle() else imageDimension
 
-        configuration.cards.forEachIndexed { index, cardData ->
+        val matrixCards = buildMatrixCards(configuration.matrix)
+        val allCards =
+            (configuration.cards + matrixCards).mapIndexed { idx, it -> ResolvedCardData(it.name, idx, it.data) }
+        allCards.forEach { cardData ->
             val elements = solver.resolveElements(cardData) + debugElements
-            val name = solver.resolveOutputName(cardData, index)
+            val name = solver.resolveOutputName(cardData)
             generateCard(name, imageDimension, cutRectangle, elements)
+        }
+    }
+
+    private fun buildMatrixCards(matrix: List<List<Map<String, String>>>): List<CardData> {
+        return buildCombo(matrix)
+            .mapIndexed { idx, it -> CardData("combo_$idx", it) }
+            .toList()
+    }
+
+    private fun buildCombo(data: List<List<Map<String, String>>>): Sequence<Map<String, String>> {
+        when (data.size) {
+            0 -> return emptySequence()
+            1 -> return data.first().asSequence()
+            else -> {
+                val head = data.first()
+                val tail = data.takeLast(data.size - 1)
+                return buildCombo(tail)
+                    .flatMap { tailCombo ->
+                        head.map { it + tailCombo }
+                    }
+            }
         }
     }
 

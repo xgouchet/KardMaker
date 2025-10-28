@@ -6,6 +6,7 @@ import fr.xgouchet.kardmaker.core.data.Point
 import fr.xgouchet.kardmaker.core.data.Rectangle
 import fr.xgouchet.kardmaker.core.data.Referential
 import fr.xgouchet.kardmaker.core.data.RelativeRectangle
+import fr.xgouchet.kardmaker.core.data.ResolvedCardData
 import fr.xgouchet.kardmaker.core.data.SizeMode
 import fr.xgouchet.kardmaker.core.data.Template
 import fr.xgouchet.kardmaker.core.data.TemplateArray
@@ -27,6 +28,7 @@ import fr.xgouchet.kardmaker.core.paint.PaintableText
 import fr.xgouchet.kardmaker.core.utils.FontRepository
 import fr.xgouchet.kardmaker.core.utils.asColor
 import fr.xgouchet.kardmaker.core.utils.bottom
+import fr.xgouchet.kardmaker.core.utils.compoundRefString
 import fr.xgouchet.kardmaker.core.utils.left
 import fr.xgouchet.kardmaker.core.utils.plus
 import fr.xgouchet.kardmaker.core.utils.refOrValue
@@ -55,38 +57,16 @@ class TemplateSolver(
         return template.cutRectangle().toPixel()
     }
 
-    fun resolveElements(cardData: CardData): List<PaintableElement> {
+    fun resolveElements(cardData: ResolvedCardData): List<PaintableElement> {
         return template.elements.flatMap {
             resolveElement(it, cardData, PointI())
         }
     }
 
-    fun resolveOutputName(cardData: CardData, index: Int): String {
+    fun resolveOutputName(cardData: ResolvedCardData): String {
         if (template.name.isNullOrBlank()) return cardData.name
 
-        val matches = NAMING_REGEX.findAll(template.name).toList()
-
-        val stringBuilder = StringBuilder()
-        var inputIndex = 0
-        matches.forEach {
-            stringBuilder.append(template.name.substring(inputIndex, it.range.first))
-            val ref = it.groupValues.last()
-            if (ref.startsWith("ref:")) {
-                stringBuilder.append(ref.refOrValue(cardData))
-            } else if (ref == "name") {
-                stringBuilder.append(cardData.name)
-            } else if (ref .startsWith("id:")) {
-                val padding = ref.substringAfterLast(':').toIntOrNull() ?: 1
-                stringBuilder.append(index.toString().padStart(padding, '0'))
-            } else {
-                error("Unknown ref in template name: {$ref}")
-            }
-            inputIndex = it.range.last + 1
-        }
-        if (inputIndex < template.name.lastIndex) {
-            stringBuilder.append(template.name.substring(inputIndex, template.name.lastIndex + 1))
-        }
-        return stringBuilder.toString()
+        return template.name.compoundRefString(cardData)
     }
 
     fun getDebugElements(): List<PaintableElement> {
@@ -112,7 +92,7 @@ class TemplateSolver(
 
     private fun resolveElement(
         element: TemplateElement,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): Collection<PaintableElement> {
         return when (element) {
@@ -128,9 +108,13 @@ class TemplateSolver(
         }
     }
 
-    private fun resolveImageElement(element: TemplateImage, cardData: CardData, offset: PointI): PaintableImage {
+    private fun resolveImageElement(
+        element: TemplateImage,
+        cardData: ResolvedCardData,
+        offset: PointI
+    ): PaintableImage {
         val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
-        val resolvedName = element.imageName.refOrValue(cardData)
+        val resolvedName = element.imageName.compoundRefString(cardData)
         return PaintableImage(
             inputFile = File(inputDir, resolvedName),
             rectangle = resolvedRectangle + offset,
@@ -140,7 +124,7 @@ class TemplateSolver(
 
     private fun resolveRectangleElement(
         element: TemplateRectangle,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): PaintableRectangle {
         val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
@@ -160,7 +144,7 @@ class TemplateSolver(
 
     private fun resolveEllipseElement(
         element: TemplateEllipse,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): PaintableEllipse {
         val resolvedRectangle = resolveRectangleI(element.rectangle, element.relative)
@@ -178,7 +162,7 @@ class TemplateSolver(
 
     private fun resolveLineElement(
         element: TemplateLine,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): PaintableLine {
         val rect = resolveRectangleI(element.rectangle, element.relative)
@@ -200,7 +184,7 @@ class TemplateSolver(
 
     private fun resolvePolygonElement(
         element: TemplatePolygon,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): PaintableElement {
         val resolvedRectangle = resolveRectangle(element.rectangle, element.relative)
@@ -228,7 +212,7 @@ class TemplateSolver(
 
     private fun resolveTextElement(
         element: TemplateText,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): PaintableElement {
         val text = element.text.refOrValue(cardData)
@@ -263,7 +247,7 @@ class TemplateSolver(
 
     private fun resolveArrayElements(
         element: TemplateArray,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): Collection<PaintableElement> {
         val elements = mutableListOf<PaintableElement>()
@@ -280,7 +264,7 @@ class TemplateSolver(
 
     private fun resolveInstancesElements(
         element: TemplateInstances,
-        cardData: CardData,
+        cardData: ResolvedCardData,
         offset: PointI
     ): Collection<PaintableElement> {
         val elements = mutableListOf<PaintableElement>()
