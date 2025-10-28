@@ -12,6 +12,7 @@ import fr.xgouchet.kardmaker.core.data.TemplateArray
 import fr.xgouchet.kardmaker.core.data.TemplateElement
 import fr.xgouchet.kardmaker.core.data.TemplateEllipse
 import fr.xgouchet.kardmaker.core.data.TemplateImage
+import fr.xgouchet.kardmaker.core.data.TemplateInstances
 import fr.xgouchet.kardmaker.core.data.TemplateLine
 import fr.xgouchet.kardmaker.core.data.TemplatePolygon
 import fr.xgouchet.kardmaker.core.data.TemplateRectangle
@@ -94,6 +95,7 @@ class TemplateSolver(
             is TemplateText -> listOf(resolveTextElement(element, cardData, offset))
             is TemplatePolygon -> listOf(resolvePolygonElement(element, cardData, offset))
             is TemplateArray -> resolveArrayElements(element, cardData, offset)
+            is TemplateInstances -> resolveInstancesElements(element, cardData, offset)
             else -> TODO()
         }
     }
@@ -240,6 +242,23 @@ class TemplateSolver(
 
         for (i in 0 until element.count) {
             val currentOffset = PointI((i * element.offset.x).toPixel(), (i * element.offset.y).toPixel()) + offset
+            element.elements.forEach {
+                elements.addAll(resolveElement(it, cardData, currentOffset))
+            }
+        }
+
+        return elements
+    }
+
+    private fun resolveInstancesElements(
+        element: TemplateInstances,
+        cardData: CardData,
+        offset: PointI
+    ): Collection<PaintableElement> {
+        val elements = mutableListOf<PaintableElement>()
+
+        for (position in element.positions) {
+            val currentOffset = position.toPixel() + offset
             element.elements.forEach {
                 elements.addAll(resolveElement(it, cardData, currentOffset))
             }
