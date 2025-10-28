@@ -9,6 +9,7 @@ data class Template(
     val cut: Float = 0f,
     val safe: Float = 0f,
     val dpi: Float = 72f,
+    val name: String? = null,
     val elements: List<TemplateElement>
 ) {
 
